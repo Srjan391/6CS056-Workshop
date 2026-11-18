@@ -35,7 +35,7 @@ class CrudTest extends TestCase
         $this->post('/students', $this->student())->assertRedirect('/students');
         $s = Student::firstOrFail();
         $this->get('/students')->assertSee('Ada Lovelace');
-        $this->get("/students/{$s->id}")->assertOk()->assertSee('2000-01-02');
+        $this->get("/students/{$s->id}")->assertOk()->assertSee('02 Jan 2000')->assertSee('Age:');
         $this->get("/students/{$s->id}/edit")->assertOk()->assertSee('value="2000-01-02"', false);
 
         $this->put("/students/{$s->id}", $this->student(['name' => 'Ada L']))->assertRedirect("/students/{$s->id}");
@@ -66,7 +66,7 @@ class CrudTest extends TestCase
         $this->get("/courses/{$c->id}/edit")->assertOk();
 
         $data = $this->course(['name' => 'PHP', 'difficulty' => 'Hard']);
-        unset($data['is_active']);
+        $data['is_active'] = '0';
         $this->put("/courses/{$c->id}", $data)->assertRedirect("/courses/{$c->id}");
         $c->refresh();
         $this->assertSame('PHP', $c->name);
@@ -81,6 +81,20 @@ class CrudTest extends TestCase
         $this->post('/courses', [])->assertSessionHasErrors(['name', 'duration', 'fee', 'difficulty']);
         $this->post('/courses', $this->course(['difficulty' => 'Insane']))->assertSessionHasErrors('difficulty');
         $this->post('/courses', $this->course(['duration' => 'abc']))->assertSessionHasErrors('duration');
+    }
+
+    public function test_layout_navbar_footer_and_old_input(): void
+    {
+        $this->get('/students')->assertSee('Training Institute Management System')
+            ->assertSee(route('courses.index'), false)->assertSee('css/app.css', false);
+
+        $this->from('/students/create')->post('/students', $this->student(['phone' => '']))
+            ->assertRedirect('/students/create');
+        $this->get('/students/create')->assertSee('value="Ada Lovelace"', false);
+
+        $this->post('/students', $this->student());
+        $this->get('/students')->assertSee('alert-success', false);
+        $this->get('/students')->assertDontSee('alert-success', false);
     }
 
     public function test_missing_records_404(): void
